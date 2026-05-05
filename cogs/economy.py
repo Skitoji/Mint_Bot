@@ -1,216 +1,102 @@
-from discord.ext import commands
-import json, os, random, time
 import discord
+from discord.ext import commands
+import json
+import os
+import random
 
 class Economy(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.data_file = "data/economy.json"
-        self.daily_file = "data/daily.json"
-        self.weekly_file = "data/weekly.json"
-        self.load_data()
+        self.balance_file = "data/balances.json"
+        self.load_balances()
     
-    def load_data(self):
-        if os.path.exists(self.data_file):
-            with open(self.data_file) as f:
-                self.economy = json.load(f)
+    def load_balances(self):
+        if not os.path.exists("data"):
+            os.makedirs("data")
+        if os.path.exists(self.balance_file):
+            with open(self.balance_file) as f:
+                self.balances = json.load(f)
         else:
-            self.economy = {}
+            self.balances = {}
     
-    def save_data(self):
-        with open(self.data_file, "w") as f:
-            json.dump(self.economy, f, indent=2)
+    def save_balances(self):
+        with open(self.balance_file, "w") as f:
+            json.dump(self.balances, f, indent=2)
     
     def get_balance(self, user_id):
-        return self.economy.get(str(user_id), 0)
+        return self.balances.get(str(user_id), 0)
     
-    def set_balance(self, user_id, amount):
-        self.economy[str(user_id)] = amount
-        self.save_data()
+    def add_money(self, user_id, amount):
+        user_id = str(user_id)
+        self.balances[user_id] = self.balances.get(user_id, 0) + amount
+        self.save_balances()
     
-    @commands.command()
-    async def balance(self, ctx, user=None):
-        """Ver balance de coins"""
-        if user:
-            try:
-                user = await commands.MemberConverter().convert(ctx, user)
-                user_id = user.id
-                balance = self.get_balance(user_id)
-                await ctx.send(f"💰 {user.mention} tiene **{balance}** coins")
-            except:
-                await ctx.send("❌ Usuario no encontrado")
-        else:
-            balance = self.get_balance(ctx.author.id)
-            await ctx.send(f"💰 Tienes **{balance}** coins")
-    
-    @commands.command()
-    async def daily(self, ctx):
-        """Recibe 500 coins diarios"""
-        user_id = str(ctx.author.id)
-        
-        if os.path.exists(self.daily_file):
-            with open(self.daily_file) as f:
-                daily_data = json.load(f)
-        else:
-            daily_data = {}
-        
-        last_daily = daily_data.get(user_id, 0)
-        now = int(time.time())
-        
-        if now - last_daily < 86400:
-            remaining = 86400 - (now - last_daily)
-            hours = remaining // 3600
-            await ctx.send(f"❌ Vuelve en {hours}h para tu daily")
-            return
-        
-        current = self.get_balance(ctx.author.id)
-        self.set_balance(ctx.author.id, current + 500)
-        
-        daily_data[user_id] = now
-        with open(self.daily_file, "w") as f:
-            json.dump(daily_data, f)
-        
-        await ctx.send("✅ Recibiste **500 coins** de tu daily!")
-    
-    @commands.command()
-    async def weekly(self, ctx):
-        """Recibe 2000 coins semanales"""
-        user_id = str(ctx.author.id)
-        
-        if os.path.exists(self.weekly_file):
-            with open(self.weekly_file) as f:
-                weekly_data = json.load(f)
-        else:
-            weekly_data = {}
-        
-        last_weekly = weekly_data.get(user_id, 0)
-        now = int(time.time())
-        
-        if now - last_weekly < 604800:
-            remaining = 604800 - (now - last_weekly)
-            days = remaining // 86400
-            await ctx.send(f"❌ Vuelve en {days}d para tu weekly")
-            return
-        
-        current = self.get_balance(ctx.author.id)
-        self.set_balance(ctx.author.id, current + 2000)
-        
-        weekly_data[user_id] = now
-        with open(self.weekly_file, "w") as f:
-            json.dump(weekly_data, f)
-        
-        await ctx.send("✅ Recibiste **2000 coins** de tu weekly! 🎉")
-    
-    @commands.command()
+    @commands.hybrid_command(name="work", description="Trabaja y gana monedas")
     async def work(self, ctx):
-        """Trabaja y gana coins"""
-        earnings = random.randint(50, 200)
-        current = self.get_balance(ctx.author.id)
-        self.set_balance(ctx.author.id, current + earnings)
-        
-        messages = [
-            f"🏭 Trabajaste y ganaste **{earnings}** coins",
-            f"💼 Completaste un trabajo y obtuviste **{earnings}** coins",
-            f"⛏️ Minaste y encontraste **{earnings}** coins"
-        ]
-        
-        await ctx.send(random.choice(messages))
+        await ctx.defer()
+        earnings = random.randint(50, 150)
+        self.add_money(ctx.author.id, earnings)
+        await ctx.send(f"💼 {ctx.author.mention} trabajaste y ganaste **{earnings}** monedas.")
     
-    @commands.command()
+    @commands.hybrid_command(name="daily", description="Recompensa diaria")
+    async def daily(self, ctx):
+        await ctx.defer()
+        # Aquí podrías añadir lógica de cooldown (opcional)
+        reward = 200
+        self.add_money(ctx.author.id, reward)
+        await ctx.send(f"📅 {ctx.author.mention} reclamaste tu recompensa diaria: **{reward}** monedas.")
+    
+    @commands.hybrid_command(name="gamble", description="Apuesta monedas (50% de ganar)")
     async def gamble(self, ctx, amount: int):
-        """Juega apostar (50% de ganar/perder)"""
-        balance = self.get_balance(ctx.author.id)
-        
+        await ctx.defer()
         if amount <= 0:
-            await ctx.send("❌ Apuesta un monto válido")
+            await ctx.send("❌ Apuesta una cantidad positiva.", ephemeral=True)
             return
-        
+        balance = self.get_balance(ctx.author.id)
         if amount > balance:
-            await ctx.send(f"❌ No tienes suficientes coins")
+            await ctx.send(f"❌ No tienes suficientes monedas. Tienes {balance}.", ephemeral=True)
             return
-        
-        if random.random() > 0.5:
-            self.set_balance(ctx.author.id, balance + amount)
-            await ctx.send(f"🎰 ¡GANASTE! +**{amount}** coins 🎉")
+        if random.choice([True, False]):
+            self.add_money(ctx.author.id, amount)
+            await ctx.send(f"🎉 ¡Ganaste! +{amount} monedas. Nuevo saldo: {self.get_balance(ctx.author.id)}")
         else:
-            self.set_balance(ctx.author.id, balance - amount)
-            await ctx.send(f"🎰 Perdiste **{amount}** coins 😢")
+            self.add_money(ctx.author.id, -amount)
+            await ctx.send(f"😢 Perdiste {amount} monedas. Saldo restante: {self.get_balance(ctx.author.id)}")
     
-    @commands.command()
-    async def slots(self, ctx, amount: int):
-        """Máquina tragamonedas"""
+    @commands.hybrid_command(name="slots", description="Juego de tragamonedas")
+    async def slots(self, ctx, bet: int):
+        await ctx.defer()
         balance = self.get_balance(ctx.author.id)
-        
-        if amount <= 0 or amount > balance:
-            await ctx.send("❌ Apuesta inválida")
+        if bet <= 0 or bet > balance:
+            await ctx.send(f"❌ Apuesta inválida. Tienes {balance} monedas.", ephemeral=True)
             return
-        
-        emojis = ['🍎', '🍊', '🍋', '🍌', '🍉']
+        emojis = ["🍒", "🍋", "🍊", "7️⃣"]
         result = [random.choice(emojis) for _ in range(3)]
-        
-        self.set_balance(ctx.author.id, balance - amount)
-        
         if result[0] == result[1] == result[2]:
-            winnings = amount * 5
-            self.set_balance(ctx.author.id, balance - amount + winnings)
-            await ctx.send(f"🎰 {result[0]} {result[1]} {result[2]}\n🎉 ¡JACKPOT! +**{winnings}** coins!")
-        elif result[0] == result[1] or result[1] == result[2]:
-            winnings = amount * 2
-            self.set_balance(ctx.author.id, balance - amount + winnings)
-            await ctx.send(f"🎰 {result[0]} {result[1]} {result[2]}\n✨ ¡2 iguales! +**{winnings}** coins")
+            multiplier = 5 if result[0] == "7️⃣" else 3
+            win = bet * multiplier
+            self.add_money(ctx.author.id, win)
+            await ctx.send(f"🎰 | {' '.join(result)} | ¡JACKPOT! Ganaste {win} monedas.")
         else:
-            await ctx.send(f"🎰 {result[0]} {result[1]} {result[2]}\n😢 -{amount} coins")
+            self.add_money(ctx.author.id, -bet)
+            await ctx.send(f"🎰 | {' '.join(result)} | Perdiste {bet} monedas.")
     
-    @commands.command()
-    async def pagar(self, ctx, user: discord.Member, amount: int):
-        """Transferir coins a otro usuario"""
-        balance = self.get_balance(ctx.author.id)
-        
-        if amount <= 0 or amount > balance:
-            await ctx.send("❌ Monto inválido")
+    @commands.hybrid_command(name="top", description="Ranking de monedas")
+    async def top(self, ctx, tipo: str = "coins"):
+        await ctx.defer()
+        if tipo.lower() != "coins":
+            await ctx.send("❌ Por ahora solo disponible `top coins`.", ephemeral=True)
             return
-        
-        self.set_balance(ctx.author.id, balance - amount)
-        receiver = self.get_balance(user.id)
-        self.set_balance(user.id, receiver + amount)
-        
-        await ctx.send(f"✅ Enviaste **{amount}** coins a {user.mention}")
-    
-    @commands.command()
-    async def leaderboard(self, ctx):
-        """Ranking de coins"""
-        sorted_users = sorted(
-            self.economy.items(),
-            key=lambda x: x[1],
-            reverse=True
-        )[:10]
-        
-        embed = discord.Embed(title="💰 Leaderboard", color=discord.Color.gold())
-        
-        for i, (user_id, balance) in enumerate(sorted_users, 1):
-            try:
-                user = await self.bot.fetch_user(int(user_id))
-                embed.add_field(name=f"#{i} {user.name}", value=f"{balance} coins", inline=False)
-            except:
-                pass
-        
+        sorted_balances = sorted(self.balances.items(), key=lambda x: x[1], reverse=True)[:10]
+        if not sorted_balances:
+            await ctx.send("No hay datos aún.")
+            return
+        embed = discord.Embed(title="💰 Ranking de monedas", color=discord.Color.gold())
+        for idx, (uid, bal) in enumerate(sorted_balances, 1):
+            user = self.bot.get_user(int(uid)) or await self.bot.fetch_user(int(uid))
+            name = user.display_name if user else uid
+            embed.add_field(name=f"{idx}. {name}", value=f"{bal} monedas", inline=False)
         await ctx.send(embed=embed)
-    
-    @commands.command()
-    @commands.is_owner()
-    async def addcoins(self, ctx, user: discord.Member, amount: int):
-        """Agregar coins a un usuario (Solo owner)"""
-        if amount < 0:
-            await ctx.send("❌ Monto inválido")
-            return
-        
-        current = self.get_balance(user.id)
-        self.set_balance(user.id, current + amount)
-        
-        await ctx.send(f"✅ Agregaste **{amount}** coins a {user.mention}\nNuevo balance: {current + amount}")
 
 async def setup(bot):
-    if bot.get_cog("Economy") is not None:
-        print("⚠️ Cog 'Economy' ya cargado - omitiendo carga duplicada")
-        return
     await bot.add_cog(Economy(bot))
