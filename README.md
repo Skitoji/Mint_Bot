@@ -1,87 +1,82 @@
-# 🤖 Discord Bot "Cacorrito"
+# 🌿 Mint Bot
 
-Un bot de Discord moderno y multifuncional escrito en Python usando `discord.py`. Incluye sistemas de música, economía, niveles, moderación y un dashboard de configuración interactivo.
+> *Inspirado en **Mint**, la enigmática y poderosa personaje de *Neverness to Everness (NTE)*.*
 
-## ✨ Características Principales
+Mint Bot es un bot de Discord moderno, escrito en Python con `discord.py`. Está diseñado para gestionar y entretener tu servidor con estilo: GIFs, moderación, música, economía, niveles y mucho más.
 
-- **🎵 Música**: Reproducción de alta calidad desde YouTube/Spotify (requiere FFmpeg).
-- **💰 Economía**: Sistema de monedas, trabajos, apuestas (`gamble`, `roulette`, `slots`) y tienda.
-- **📈 Niveles (XP)**: Sistema de experiencia por mensajes con notificaciones de nivel.
-- **💍 Perfil y Matrimonios**: Perfiles personalizables con biografía y sistema de matrimonios dinámico.
-- **⚙️ Dashboard**: Panel de configuración interactivo dentro de Discord para personalizar bienvenidas.
-- **🛡️ Moderación**: Comandos de kick, ban, mute y sistema de advertencias.
-- **👋 Bienvenidas**: Mensajes de bienvenida personalizables con imágenes/GIFs configurables.
+## ✨ Características principales
 
-## 🚀 Instalación y Uso
+| Módulo | Funcionalidades |
+|--------|----------------|
+| 🌿 **Mint** | GIFs temáticos y respuestas con actitud (`/mint hazlotu`, `/mint venecos`, `/mint pendejo`…) |
+| 🛡️ **Moderación** | Warn, mute, kick, ban con notificaciones por DM y sistema de advertencias |
+| 🎵 **Música** | Reproducción desde YouTube/Spotify (FFmpeg) |
+| 💰 **Economía** | Monedas, trabajos, apuestas, tienda |
+| 📈 **Niveles (XP)** | Sistema de experiencia por mensajes |
+| 💍 **Perfiles** | Perfil personalizable, biografía, sistema de matrimonio |
+| ⚙️ **Dashboard** | Configuración de bienvenidas dentro de Discord |
+| 🎲 **Diversión** | Trivia, memes, bola mágica y más |
 
-### prerrequisitos
-- Python 3.9 o superior
-- FFmpeg (para música)
-- Un bot creado en el [Discord Developer Portal](https://discord.com/developers/applications)
+## 🎮 Comandos
 
-### Pasos
-1. **Clonar el repositorio**
-   ```bash
-   git clone https://github.com/tu-usuario/tu-repo.git
-   cd tu-repo
-   ```
+Todos los comandos están disponibles como **slash commands** (`/`) y también con prefijo (`&`).
 
-2. **Instalar dependencias**
-   ```bash
-   pip install -r requirements.txt
-   ```
+### 🌿 Mint (GIFs)
 
-3. **Configuración**
-   Crea un archivo `config.json` en la carpeta raíz (o renombra uno de ejemplo) con el siguiente contenido:
-   ```json
-   {
-       "TOKEN": "TU_TOKEN_DE_DISCORD_AQUI",
-       "PREFIX": "&"
-   }
-   ```
-   *Nota: El archivo `data/welcome_config.json` se creará automáticamente al configurar el dashboard.*
+- `/mint hazlotu`
+- `/mint venecos`
+- `/mint feliz`
+- `/mint who`
+- `/mint proyectada`
+- `/mint pendejo`
+- `/mint paja`
+- `/mint afk`
+- `/mint borren`
+- `/mint isthis`
 
-4. **Iniciar el bot**
-   ```bash
-   python main.py
-   ```
+### 🛡️ Moderación
 
-## 🎮 Comandos Principales
-
-El bot usa "Slash Commands" (/) y prefijo (`&`).
-
-### 🛠️ Utilidad y Configuración
-- `&sync`: Sincroniza los comandos slash (Usa `&sync .` para sincronizar instantáneamente en el servidor actual).
-- `&dashboard`: Abre el panel interactivo para configurar el canal y mensaje de bienvenida.
-- `&testwelcome`: Prueba la configuración de bienvenida actual.
-
-### 👤 Perfil y Social
-- `/profile`: Muestra tu tarjeta de perfil con Nivel, XP, Dinero y Pareja.
-- `/marry <usuario>`: Propón matrimonio a alguien.
-- `/divorce`: Divórciate de tu pareja actual.
-- `/bio <texto>`: Configura tu biografía personal.
+- `/warn @usuario [razón]`
+- `/mute @usuario segundos [razón]`
+- `/kick @usuario [razón]`
+- `/ban @usuario [razón]`
+- `/unban id [razón]`
+- `/warns [usuario]`
 
 ### 🎵 Música
-- `/play <canción>`: Reproduce música.
-- `/stop`, `/pause`, `/resume`, `/skip`: Controles de reproducción.
+
+- `/play canción`
+- `/stop`, `/pause`, `/resume`, `/skip`
 
 ### 💰 Economía
-- `/work`: Trabaja para ganar monedas.
-- `/daily`: Reclama tu recompensa diaria.
-- `/gamble <monto>`: Apuesta tus monedas.
-- `/top coins`: Ver tabla de clasificación de dinero.
 
-### 🎲 Diversión
-- `/trivia`: Contesta preguntas de cultura general.
-- `/meme`: Muestra un meme aleatorio.
-- `/eightball`: Pregunta a la bola mágica.
+- `/work`, `/daily`, `/gamble`, `/slots`
+- `/top coins`
 
-## 📂 Estructura del Proyecto
-- `main.py`: Punto de entrada del bot.
-- `cogs/`: Módulos del bot (Música, Economía, etc.).
-- `utils/`: Utilidades de interfaz (Embeds, UI Views).
-- `data/`: Archivos JSON para persistencia de datos (Dinero, XP, Config).
+### 👤 Perfil / Niveles
 
-## 📝 Notas
-- Asegúrate de tener **FFmpeg** instalado y agregado al PATH del sistema para que funcione la música.
-- La primera vez que inicies, ejecuta `&sync .` para ver los comandos slash inmediatamente.
+- `/profile`
+- `/bio texto`
+- `/marry @usuario`, `/divorce`
+
+### ⚙️ Utilidad
+
+- `/dashboard` – Configurar bienvenidas
+- `/testwelcome` – Probar bienvenida
+
+## 🚀 Instalación (para el dueño de la VPS)
+
+### Requisitos
+
+- Python 3.9+
+- FFmpeg (solo para música)
+- Git
+
+### Pasos
+
+```bash
+git clone https://github.com/Skitoji/Mint_Bot.git
+cd Mint_Bot
+python3 -m venv venv
+source venv/bin/activate   # En Windows: venv\Scripts\activate
+pip install -r requirements.txt
