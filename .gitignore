@@ -1,24 +1,19 @@
-# Archivos de configuración con tokens
-config.json
-
-# Datos generados por el bot
-data/
-*.json
-!requirements.txt
-
-# Archivos de entorno virtual
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+env/
 venv/
 .env
-.venv
 
-# Archivos de backup
-*.bak
-*.pyc
-__pycache__/
+# Datos del bot (¡IMPORTANTE!)
+data/
+*.json
+!requirements.txt   # Excepto requirements.txt
+!config.json.example   # Si usas un ejemplo, pero no el real
 
-# Archivos del sistema
+# Archivos temporales y de sistema
 .DS_Store
 Thumbs.db
-
-# Logs
 *.log

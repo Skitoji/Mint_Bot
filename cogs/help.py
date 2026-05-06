@@ -106,7 +106,7 @@ class Help(commands.Cog):
         )
         embed.add_field(
             name="&work",
-            value="Trabaja y gana 50-200 coins (sin cooldown)",
+            value="Trabaja y gana 50-200 coins (25 veces al día, cooldown 3s)",
             inline=False
         )
         embed.add_field(
@@ -124,11 +124,8 @@ class Help(commands.Cog):
             value="Transfiere coins a otro usuario",
             inline=False
         )
-        embed.add_field(
-            name="&leaderboard",
-            value="Ve el ranking de usuarios más ricos",
-            inline=False
-        )
+        # NOTA: El comando &leaderboard ha sido eliminado porque no funciona.
+        # Usa &top coins para ver el ranking de monedas.
         return embed
     
     def _fun_help(self):
@@ -276,7 +273,7 @@ class Help(commands.Cog):
         )
         embed.add_field(
             name="&addcoins <usuario> <monto>",
-            value="Agrega coins a un usuario (testing)",
+            value="Agrega coins a un usuario (solo owner)",
             inline=False
         )
         embed.add_field(
