@@ -5,82 +5,97 @@ import os
 class MintCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        # GIFs mediante URL (igual que en bot.py original)
+        # GIFs mediante URL
         self.gifs_url = {
-            "hazlo tu":  "https://cdn.discordapp.com/attachments/1249029432862310405/1488216155217854676/togif.gif",
-            "venecos":   "https://tenor.com/rRToQbUb6wk.gif",
-            "feliz":     "https://tenor.com/cOqRmS4Zjev.gif",
-            "who":       "https://tenor.com/q5XWIULZJnY.gif",
-            "pendejo":   "https://images-ext-1.discordapp.net/external/CGxMQ4A1x4YmcGMrksItfT4p1orZ3PxWGfllLmbCq7I/https/media.tenor.com/yFMN4ZGdv8AAAAPo/rigby-cat-rigby.mp4",
+            "hazlotu": "https://cdn.discordapp.com/attachments/1249029432862310405/1488216155217854676/togif.gif",
+            "venecos": "https://tenor.com/rRToQbUb6wk.gif",
+            "feliz": "https://tenor.com/cOqRmS4Zjev.gif",
+            "who": "https://tenor.com/q5XWIULZJnY.gif",
+            "pendejo": "https://images-ext-1.discordapp.net/external/CGxMQ4A1x4YmcGMrksItfT4p1orZ3PxWGfllLmbCq7I/https/media.tenor.com/yFMN4ZGdv8AAAAPo/rigby-cat-rigby.mp4",
         }
-        # GIFs como archivos locales (deben estar en la carpeta gifs/)
+        # GIFs como archivos locales
         self.gifs_file = {
-            "proyectada":       "gifs/proyectada.gif",
-            "paja":             "gifs/paja.gif",
-            "afk":              "gifs/afk.gif",
-            "borren el server": "gifs/borren_el_server.mp4",
-            "is this":          "gifs/is this.mp4",
+            "proyectada": "gifs/proyectada.gif",
+            "paja": "gifs/paja.gif",
+            "afk": "gifs/afk.gif",
+            "borren": "gifs/borren_el_server.mp4",
+            "isthis": "gifs/is this.mp4",
         }
 
-    @commands.hybrid_group(name="mint", fallback="hazlo")
-    async def mint(self, ctx, *, tema: str = "hazlo tu"):
-        """Comandos temáticos de Mint (igual que el original)"""
-        tema = tema.lower().strip()
-        # Primero buscar en URLs
-        if tema in self.gifs_url:
-            await ctx.send(self.gifs_url[tema])
-            return
-        # Luego en archivos locales
-        if tema in self.gifs_file:
-            ruta = self.gifs_file[tema]
-            if os.path.exists(ruta):
-                await ctx.send(file=discord.File(ruta))
-            else:
-                await ctx.send(f"❌ No se encuentra el archivo `{ruta}`. Verifica la carpeta `gifs`.")
-            return
-        # Si no existe
-        await ctx.send("❌ Tema no encontrado. Usa: `hazlo tu`, `venecos`, `feliz`, `who`, `pendejo`, `proyectada`, `paja`, `afk`, `borren el server`, `is this`")
+    @commands.hybrid_group(name="mint", invoke_without_command=True)
+    async def mint(self, ctx):
+        """Comandos de Mint: usa /mint hazlotu, /mint venecos, etc."""
+        await ctx.send("❌ Debes especificar un subcomando. Usa `/mint hazlotu`, `/mint venecos`, etc.")
 
-    # Subcomandos individuales para autocompletado (igual que antes)
     @mint.command(name="hazlotu")
     async def mint_hazlotu(self, ctx):
-        await self.mint(ctx, tema="hazlo tu")
+        """Hazlo tú"""
+        await ctx.send(self.gifs_url["hazlotu"])
 
     @mint.command(name="venecos")
     async def mint_venecos(self, ctx):
-        await self.mint(ctx, tema="venecos")
+        """Pa' los venecos"""
+        await ctx.send(self.gifs_url["venecos"])
 
     @mint.command(name="feliz")
     async def mint_feliz(self, ctx):
-        await self.mint(ctx, tema="feliz")
+        """Cuando el mood está bien"""
+        await ctx.send(self.gifs_url["feliz"])
 
     @mint.command(name="who")
     async def mint_who(self, ctx):
-        await self.mint(ctx, tema="who")
-
-    @mint.command(name="proyectada")
-    async def mint_proyectada(self, ctx):
-        await self.mint(ctx, tema="proyectada")
+        """¿Quién?"""
+        await ctx.send(self.gifs_url["who"])
 
     @mint.command(name="pendejo")
     async def mint_pendejo(self, ctx):
-        await self.mint(ctx, tema="pendejo")
+        """Rigby lo dice por ti"""
+        await ctx.send(self.gifs_url["pendejo"])
+
+    @mint.command(name="proyectada")
+    async def mint_proyectada(self, ctx):
+        """La proyectada de siempre"""
+        ruta = self.gifs_file["proyectada"]
+        if os.path.exists(ruta):
+            await ctx.send(file=discord.File(ruta))
+        else:
+            await ctx.send(f"❌ No se encuentra el archivo `{ruta}`.")
 
     @mint.command(name="paja")
     async def mint_paja(self, ctx):
-        await self.mint(ctx, tema="paja")
+        """Sin comentarios"""
+        ruta = self.gifs_file["paja"]
+        if os.path.exists(ruta):
+            await ctx.send(file=discord.File(ruta))
+        else:
+            await ctx.send(f"❌ No se encuentra el archivo `{ruta}`.")
 
     @mint.command(name="afk")
     async def mint_afk(self, ctx):
-        await self.mint(ctx, tema="afk")
+        """Me fui, chao"""
+        ruta = self.gifs_file["afk"]
+        if os.path.exists(ruta):
+            await ctx.send(file=discord.File(ruta))
+        else:
+            await ctx.send(f"❌ No se encuentra el archivo `{ruta}`.")
 
     @mint.command(name="borren")
     async def mint_borren(self, ctx):
-        await self.mint(ctx, tema="borren el server")
+        """Nuclear option"""
+        ruta = self.gifs_file["borren"]
+        if os.path.exists(ruta):
+            await ctx.send(file=discord.File(ruta))
+        else:
+            await ctx.send(f"❌ No se encuentra el archivo `{ruta}`.")
 
     @mint.command(name="isthis")
     async def mint_isthis(self, ctx):
-        await self.mint(ctx, tema="is this")
+        """¿Es esto...?"""
+        ruta = self.gifs_file["isthis"]
+        if os.path.exists(ruta):
+            await ctx.send(file=discord.File(ruta))
+        else:
+            await ctx.send(f"❌ No se encuentra el archivo `{ruta}`.")
 
 async def setup(bot):
     await bot.add_cog(MintCog(bot))
