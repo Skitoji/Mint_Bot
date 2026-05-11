@@ -69,10 +69,6 @@ class Say(commands.Cog):
                     "black": discord.Color.from_rgb(0, 0, 0),
                 }
                 color_embed = colores.get(color.value, discord.Color.blue())
-        # Si se escribió un hex manual (por si el usuario usa el comando con prefijo y escribe #ff0000)
-        elif color is None and color_arg:  # no aplica aquí porque no tenemos ese parámetro en slash, pero en el comando prefijo se podría
-            pass
-
         # Crear embed
         embed = discord.Embed(
             title=titulo,

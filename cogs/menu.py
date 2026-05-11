@@ -50,10 +50,6 @@ class Menu(commands.Cog):
         view = MenuView(self.help_cog)
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
-    async def cog_load(self):
-        # self.bot.tree.add_command(self.menu) # Duplicate registration
-        pass
-
 async def setup(bot):
     if bot.get_cog("Menu") is not None:
         print("⚠️ Cog 'Menu' ya cargado - omitiendo carga duplicada")
