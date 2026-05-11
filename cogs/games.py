@@ -267,85 +267,186 @@ class Games(commands.Cog):
         embed = discord.Embed(title="📄🪨✂️ Piedra, Papel o Tijera", description=f"{ctx.author.mention} vs {usuario.mention}\nElige tu opción:", color=discord.Color.blurple())
         await ctx.send(embed=embed, view=view)
 
-    @commands.hybrid_command(name="trivia", description="Responde preguntas de trivia")
-    async def trivia(self, ctx):
-        await ctx.defer()
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get("https://opentdb.com/api.php?amount=1&type=multiple") as resp:
-                    if resp.status != 200:
-                        await ctx.send(embed=error_embed("❌ Error al obtener pregunta"), ephemeral=True)
-                        return
-                    data = await resp.json()
-        except:
-            await ctx.send(embed=error_embed("❌ Error de conexión con la API de trivia"), ephemeral=True)
-            return
+    # ==================================================================
+    # COMANDO: /snake
+    # ==================================================================
 
-        if not data.get("results"):
-            await ctx.send(embed=error_embed("❌ No se pudo obtener una pregunta"), ephemeral=True)
-            return
+    @commands.hybrid_command(
+        name="snake",
+        aliases=["serpiente"],
+        description="🐍 Juego de la serpiente — atrapa la manzana y no choques",
+    )
+    async def snake(self, ctx: commands.Context) -> None:
+        """🐍 Snake Game — Usa botones para dirigir la serpiente y comer manzanas."""
+        # Tablero 8×8
+        COLS, ROWS = 8, 8
 
-        q = data["results"][0]
-        import html
-        pregunta = html.unescape(q["question"])
-        correcta = html.unescape(q["correct_answer"])
-        incorrectas = [html.unescape(i) for i in q["incorrect_answers"]]
-        opciones = incorrectas + [correcta]
-        random.shuffle(opciones)
+        # Inicializar estado
+        snake_body = [(3, 4), (3, 3), (3, 2)]  # cabeza primero
+        direction = (0, 1)  # derecha
+        food = None
+        score = 0
+        game_over = False
 
-        class TriviaView(discord.ui.View):
-            def __init__(self):
-                super().__init__(timeout=30)
-                self.respondido = False
+        def place_food():
+            """Coloca comida en una posición aleatoria vacía."""
+            occupied = set(snake_body)
+            posibles = [(r, c) for r in range(ROWS) for c in range(COLS) if (r, c) not in occupied]
+            return random.choice(posibles) if posibles else None
 
-            async def send_response(self, interaction, selected, label):
-                if self.respondido:
-                    await interaction.response.send_message("⚠️ Ya respondiste!", ephemeral=True)
+        food = place_food()
+
+        def build_board_embed(title_text, desc_text=""):
+            """Construye el embed con el tablero."""
+            lines = []
+            for r in range(ROWS):
+                row_chars = []
+                for c in range(COLS):
+                    if (r, c) == snake_body[0]:
+                        row_chars.append("🟢")
+                    elif (r, c) in snake_body:
+                        row_chars.append("🟩")
+                    elif food and (r, c) == food:
+                        row_chars.append("🍎")
+                    else:
+                        row_chars.append("⬛")
+                lines.append("".join(row_chars))
+
+            embed = discord.Embed(
+                title=title_text,
+                description=desc_text + "\n\n" + "\n".join(lines),
+                color=discord.Color.green(),
+            )
+            embed.set_footer(text=f"🐍 {score} puntos")
+            return embed
+
+        class SnakeView(discord.ui.View):
+            def __init__(self, author):
+                super().__init__(timeout=120)
+                self.author = author
+                self.snake = snake_body[:]
+                self.dir = direction
+                self.food = food
+                self.score = score
+                self.over = game_over
+
+            def move(self):
+                """Mueve la serpiente en la dirección actual."""
+                if self.over:
+                    return True
+
+                head_r, head_c = self.snake[0]
+                dr, dc = self.dir
+                new_head = (head_r + dr, head_c + dc)
+
+                # Verificar colisión con bordes
+                if not (0 <= new_head[0] < ROWS and 0 <= new_head[1] < COLS):
+                    self.over = True
+                    return True
+
+                # Verificar colisión con cuerpo
+                if new_head in self.snake[:-1]:
+                    self.over = True
+                    return True
+
+                # Mover cabeza
+                self.snake.insert(0, new_head)
+
+                # Comer comida
+                if self.food and new_head == self.food:
+                    self.score += 1
+                    self.food = place_food()
+                    if self.food is None:
+                        self.over = True  # ganó, llenó todo
+                        return True
+                else:
+                    self.snake.pop()
+
+                return False
+
+            def can_move(self, new_dir):
+                """No puede revertir dirección."""
+                dr, dc = new_dir
+                hdr, hdc = self.dir
+                return (dr * -1, dc * -1) != (hdr, hdc) or len(self.snake) < 2
+
+            async def update_board(self, interaction):
+                if self.over:
+                    embed = build_board_embed(
+                        "💀 GAME OVER",
+                        f"Puntuación final: **{self.score}** 🐍"
+                    )
+                    for child in self.children:
+                        child.disabled = True
+                    await interaction.response.edit_message(embed=embed, view=self)
+                    self.stop()
                     return
-                self.respondido = True
+
+                embed = build_board_embed(
+                    "🐍 SNAKE",
+                    f"Dirección: {'⬆️' if self.dir == (-1,0) else '⬇️' if self.dir == (1,0) else '⬅️' if self.dir == (0,-1) else '➡️'}"
+                )
+                # Restaurar botones de dirección
+                for child in self.children:
+                    if isinstance(child, discord.ui.Button):
+                        child.disabled = False
+                await interaction.response.edit_message(embed=embed, view=self)
+
+            @discord.ui.button(label="⬆️", style=discord.ButtonStyle.secondary, row=0)
+            async def up_btn(self, interaction: discord.Interaction, _):
+                if interaction.user.id != self.author.id:
+                    return await interaction.response.send_message("❌ No es tu juego", ephemeral=True)
+                if self.can_move((-1, 0)):
+                    self.dir = (-1, 0)
+                go = self.move()
+                await self.update_board(interaction)
+
+            @discord.ui.button(label="⬇️", style=discord.ButtonStyle.secondary, row=1)
+            async def down_btn(self, interaction: discord.Interaction, _):
+                if interaction.user.id != self.author.id:
+                    return await interaction.response.send_message("❌ No es tu juego", ephemeral=True)
+                if self.can_move((1, 0)):
+                    self.dir = (1, 0)
+                self.move()
+                await self.update_board(interaction)
+
+            @discord.ui.button(label="⬅️", style=discord.ButtonStyle.secondary, row=2)
+            async def left_btn(self, interaction: discord.Interaction, _):
+                if interaction.user.id != self.author.id:
+                    return await interaction.response.send_message("❌ No es tu juego", ephemeral=True)
+                if self.can_move((0, -1)):
+                    self.dir = (0, -1)
+                self.move()
+                await self.update_board(interaction)
+
+            @discord.ui.button(label="➡️", style=discord.ButtonStyle.secondary, row=2)
+            async def right_btn(self, interaction: discord.Interaction, _):
+                if interaction.user.id != self.author.id:
+                    return await interaction.response.send_message("❌ No es tu juego", ephemeral=True)
+                if self.can_move((0, 1)):
+                    self.dir = (0, 1)
+                self.move()
+                await self.update_board(interaction)
+
+            async def on_timeout(self):
                 for child in self.children:
                     child.disabled = True
-                if selected == correcta:
-                    embed = discord.Embed(title="✅ Correcto!", description=f"**{pregunta}**\n\nRespuesta: {correcta}", color=discord.Color.green())
-                else:
-                    embed = discord.Embed(title="❌ Incorrecto", description=f"**{pregunta}**\n\nRespuesta correcta: **{correcta}**", color=discord.Color.red())
-                await interaction.response.edit_message(embed=embed, view=self)
-                self.stop()
+                try:
+                    embed = build_board_embed(
+                        "⏰ TIEMPO AGOTADO",
+                        f"Puntuación final: **{self.score}** 🐍"
+                    )
+                    await self.message.edit(embed=embed, view=self)
+                except:
+                    pass
 
-        view = TriviaView()
-        for op in opciones:
-            btn = discord.ui.Button(label=op[:80], style=discord.ButtonStyle.secondary)
-            async def callback(interaction, opcion=op):
-                await view.send_response(interaction, opcion, "")
-            btn.callback = callback
-            view.add_item(btn)
-
-        embed = discord.Embed(title=f"❓ Trivia — {html.unescape(q['category'])}", description=f"**{pregunta}**", color=discord.Color.blurple())
-        embed.set_footer(text="Tienes 30 segundos")
+        view = SnakeView(ctx.author)
+        embed = build_board_embed(
+            "🐍 SNAKE",
+            "¡Usa los botones para mover la serpiente!\nAtrapa 🍎 para sumar puntos."
+        )
         await ctx.send(embed=embed, view=view)
 
-    @commands.hybrid_command(name="meme", description="Muestra un meme aleatorio")
-    async def meme(self, ctx):
-        await ctx.defer()
-        try:
-            for subreddit in ["dankmemes", "memes", "ProgrammerHumor", "SpanishMeme"]:
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(f"https://www.reddit.com/r/{subreddit}/hot.json?limit=50", headers={"User-Agent": "MintBot/1.0"}) as resp:
-                        if resp.status != 200:
-                            continue
-                        data = await resp.json()
-                        posts = [p["data"] for p in data.get("data", {}).get("children", [])
-                                if not p["data"].get("stickied") and p["data"].get("url", "").endswith((".jpg", ".png", ".gif", ".jpeg"))]
-                        if posts:
-                            post = random.choice(posts)
-                            embed = discord.Embed(title=post["title"], color=discord.Color.blurple())
-                            embed.set_image(url=post["url"])
-                            embed.set_footer(text=f"👍 {post.get('ups', 0)}  |  r/{subreddit}")
-                            await ctx.send(embed=embed)
-                            return
-            await ctx.send(embed=error_embed("❌ No se encontraron memes"))
-        except Exception as e:
-            await ctx.send(embed=error_embed(f"❌ Error: {str(e)[:50]}"), ephemeral=True)
 
 async def setup(bot):
     await bot.add_cog(Games(bot))

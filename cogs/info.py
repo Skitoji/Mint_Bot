@@ -307,6 +307,97 @@ class Info(commands.Cog):
         await ctx.send(embed=embed)
 
 
+    @commands.hybrid_command(name="banner", description="Muestra el banner de perfil de un usuario")
+    @app_commands.describe(usuario="Usuario del que quieres ver el banner")
+    async def banner(self, ctx: commands.Context, usuario: Optional[discord.Member] = None):
+        """Muestra el banner de perfil de un usuario"""
+        usuario = usuario or ctx.author
+
+        if usuario.banner:
+            embed = discord.Embed(
+                title=f"🖼️ Banner de {usuario.display_name}",
+                color=usuario.color or discord.Color.blurple(),
+            )
+            embed.set_image(url=usuario.banner.url)
+            embed.set_footer(text=f"ID: {usuario.id}")
+            await ctx.send(embed=embed)
+        else:
+            # Intentar obtener via API
+            try:
+                user_data = await self.bot.http.get_user(usuario.id)
+                banner_id = user_data.get("banner")
+                if banner_id:
+                    is_animated = banner_id.startswith("a_")
+                    fmt = "gif" if is_animated else "png"
+                    url = f"https://cdn.discordapp.com/banners/{usuario.id}/{banner_id}.{fmt}?size=1024"
+                    embed = discord.Embed(
+                        title=f"🖼️ Banner de {usuario.display_name}",
+                        color=usuario.color or discord.Color.blurple(),
+                    )
+                    embed.set_image(url=url)
+                    embed.set_footer(text=f"ID: {usuario.id}")
+                    await ctx.send(embed=embed)
+                else:
+                    await ctx.send(f"❌ **{usuario.display_name}** no tiene banner de perfil.")
+            except:
+                await ctx.send(f"❌ **{usuario.display_name}** no tiene banner de perfil.")
+
+    @commands.hybrid_command(name="channelinfo", description="Muestra información detallada de un canal")
+    @app_commands.describe(canal="Canal a inspeccionar (omite para el actual)")
+    async def channelinfo(self, ctx: commands.Context, canal: Optional[discord.TextChannel] = None):
+        """Muestra información de un canal del servidor"""
+        canal = canal or ctx.channel
+
+        embed = discord.Embed(
+            title=f"📢 #{canal.name}",
+            color=discord.Color.blurple(),
+        )
+
+        embed.add_field(name="ID", value=canal.id, inline=True)
+        embed.add_field(name="Tipo", value=str(canal.type).title(), inline=True)
+        embed.add_field(name="Categoría", value=canal.category.name if canal.category else "Sin categoría", inline=True)
+        embed.add_field(name="Posición", value=canal.position, inline=True)
+        embed.add_field(name="NSFW", value="Sí ⛔" if canal.is_nsfw() else "No ✅", inline=True)
+
+        if hasattr(canal, "slowmode_delay"):
+            embed.add_field(name="Modo lento", value=f"{canal.slowmode_delay}s" if canal.slowmode_delay else "Desactivado", inline=True)
+
+        if isinstance(canal, discord.TextChannel):
+            embed.add_field(name="Tópico", value=canal.topic[:200] if canal.topic else "Sin tópico", inline=False)
+
+        embed.set_footer(text=f"Creado el {canal.created_at.strftime('%d/%m/%Y')}")
+        await ctx.send(embed=embed)
+
+    @commands.hybrid_command(name="servericon", description="Muestra el icono del servidor en tamaño completo")
+    async def servericon(self, ctx: commands.Context):
+        """Muestra el icono del servidor"""
+        if ctx.guild.icon:
+            embed = discord.Embed(
+                title=f"🖼️ Icono de {ctx.guild.name}",
+                color=discord.Color.blurple(),
+            )
+            embed.set_image(url=ctx.guild.icon.url)
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send("❌ Este servidor no tiene icono.")
+
+    @commands.hybrid_command(name="invite", description="Obtén el enlace de invitación de Mint Bot")
+    async def invite(self, ctx: commands.Context):
+        """Invita a Mint Bot a tu servidor"""
+        embed = discord.Embed(
+            title="🔗 Invitar a Mint Bot",
+            description=(
+                "¿Quieres invitarme a otro servidor?\n\n"
+                f"[**Haz clic aquí para invitarme**]"
+                f"(https://discord.com/api/oauth2/authorize?client_id={self.bot.user.id}&permissions=8&scope=bot%20applications.commands)\n\n"
+                "Gracias por tenerme en tu servidor 💚"
+            ),
+            color=discord.Color.green(),
+        )
+        embed.set_footer(text="Mint Bot — Inspirado en NTE")
+        await ctx.send(embed=embed)
+
+
 async def setup(bot):
     """Carga el cog Info en el bot"""
     if bot.get_cog("Info") is not None:

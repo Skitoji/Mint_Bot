@@ -38,20 +38,20 @@ class Fun(commands.Cog):
         if not economy:
             await ctx.send(embed=ui.error_embed("Economy cog no encontrado"))
             return
-        
+
         balance = economy.get_balance(ctx.author.id)
-        
+
         if balance == 0:
             await ctx.send(embed=ui.error_embed("Necesitas dinero para jugar"))
             return
-        
+
         if random.random() > 0.5:
             loss = int(balance * 0.5)
-            economy.set_balance(ctx.author.id, balance - loss)
+            economy.add_money(ctx.author.id, -loss)
             await ctx.send(embed=ui.simple_embed("💀 ¡PERDISTE!", f"Perdiste **{loss}** coins", color=discord.Color.red()))
         else:
             gain = int(balance * 0.5)
-            economy.set_balance(ctx.author.id, balance + gain)
+            economy.add_money(ctx.author.id, gain)
             await ctx.send(embed=ui.success_embed(f"¡SOBREVIVISTE! Ganaste **{gain}** coins por tu valentía"))
     
     @commands.hybrid_command(description="Responde una pregunta de trivia")
@@ -140,13 +140,204 @@ class Fun(commands.Cog):
     async def choose(self, ctx, *, options: str):
         """Elegir entre opciones - &choose opción1 | opción2 | opción3"""
         choices = [c.strip() for c in options.split('|')]
-        
+
         if len(choices) < 2:
             await ctx.send(embed=ui.error_embed("Necesitas al menos 2 opciones separadas por |"))
             return
-        
+
         chosen = random.choice(choices)
         await ctx.send(embed=ui.success_embed(f"Elegí: **{chosen}**"))
+
+    @commands.hybrid_command(
+        name="coinflip",
+        aliases=["flip"],
+        description="🪙 Lanza una moneda (cara o cruz)",
+    )
+    async def coinflip(self, ctx):
+        """Lanza una moneda al aire"""
+        result = random.choice(['Cara ✅', 'Cruz ❌'])
+        await ctx.send(embed=ui.simple_embed("🪙 Moneda", f"Cayó: **{result}**"))
+
+    @commands.hybrid_command(
+        name="dice",
+        aliases=["roll"],
+        description="🎲 Lanza un dado de hasta 100 caras",
+    )
+    async def dice(self, ctx, caras: int = 6):
+        """Lanza un dado con el número de caras que elijas"""
+        if caras < 2 or caras > 100:
+            await ctx.send(embed=ui.error_embed("El dado debe tener entre **2** y **100** caras"))
+            return
+        result = random.randint(1, caras)
+        await ctx.send(embed=ui.simple_embed("🎲 Dado", f"Sacaste un **{result}** (dado de {caras} caras) 🎲"))
+
+    @commands.hybrid_command(
+        name="howgay",
+        description="🏳️‍🌈 Mide qué tan gay eres (o alguien más)",
+    )
+    async def howgay(self, ctx, usuario: discord.Member = None):
+        """Mide el nivel de gay de un usuario"""
+        usuario = usuario or ctx.author
+        if usuario.id == ctx.author.id:
+            desc = f"**{usuario.display_name}** es **{random.randint(0,100)}%** gay 🏳️‍🌈"
+        else:
+            desc = f"**{usuario.display_name}** es **{random.randint(0,100)}%** gay 🏳️‍🌈\n(según {ctx.author.display_name})"
+        await ctx.send(embed=ui.simple_embed("🏳️‍🌈 Medidor de Gay", desc))
+
+    @commands.hybrid_command(
+        name="lovecalc",
+        description="💕 Calcula el amor entre dos personas",
+    )
+    async def lovecalc(self, ctx, persona1: discord.Member, persona2: discord.Member = None):
+        """Calcula la compatibilidad amorosa"""
+        if persona2 is None:
+            persona2 = ctx.author
+        love = random.randint(0, 100)
+        hearts = "❤️" * (love // 10) + "🖤" * (10 - love // 10)
+        desc = f"**{persona1.display_name}** 💕 **{persona2.display_name}**\n\n{hearts}\n**{love}%** de compatibilidad"
+        if love >= 80:
+            desc += "\n✨ ¡Destinados a estar juntos!"
+        elif love >= 50:
+            desc += "\n💫 Tienen potencial"
+        else:
+            desc += "\n💔 Mejor como amigos"
+        await ctx.send(embed=ui.simple_embed("💕 LoveCalc", desc))
+
+    @commands.hybrid_command(
+        name="ascii",
+        description="🎨 Convierte texto a ASCII art",
+    )
+    async def ascii(self, ctx, *, texto: str):
+        """Convierte texto a arte ASCII (letras grandes)"""
+        if len(texto) > 20:
+            await ctx.send(embed=ui.error_embed("El texto no puede tener más de **20** caracteres"))
+            return
+        letras = {
+            'a':' ▄▀ ',' b':' ▄▄ ',' c':' ▄▄ ',' d':' ▄▀ ',' e':' ▄▄ ',' f':' ▄▄ ',' g':' ▄▄ ',' h':' ▄ ▄ ',' i':' ▄▄ ',' j':' ▄▄ ',' k':' ▄ ▄ ',' l':' ▄   ',' m':' ▄▄▄ ',' n':' ▄▄▄ ',' o':' ▄▄▄ ',' p':' ▄▄▄ ',' q':' ▄▄▄ ',' r':' ▄▄▄ ',' s':' ▄▄▄ ',' t':' ▄▄▄▄',' u':' ▄ ▄ ',' v':' ▄ ▄ ',' w':' ▄ ▄▄▄',' x':' ▄ ▄ ',' y':' ▄ ▄▄▄',' z':' ▄▄▄ ',
+            'A':'█▀█ ','B':'█▀▄ ','C':'█▀▀ ','D':'█▀▄ ','E':'█▀▀ ','F':'█▀▀ ','G':'█▀▀ ','H':'█ █ ','I':'██ ','J':' ██ ','K':'█▄▀ ','L':'█   ','M':'█▄▄▄█','N':'█▄▄█ ','O':'█▄▄█ ','P':'█▀▄ ','Q':'█▄▄▄','R':'█▀▄ ','S':'█▄▄ ','T':'▀█▀ ','U':'█ █ ','V':'█ █ ','W':'█ ██▄','X':'▀▄▀ ','Y':'█ █ ','Z':'▀▀█ '
+        }
+        resultado = []
+        texto = texto.lower()
+        for char in texto:
+            if char in letras:
+                resultado.append(letras[char])
+            elif char == ' ':
+                resultado.append('    ')
+            else:
+                resultado.append(f' {char} ')
+        await ctx.send(f"```\n{' '.join(resultado)}\n```")
+
+    @commands.hybrid_command(
+        name="reverse",
+        description="🔄 Invierte un texto",
+    )
+    async def reverse(self, ctx, *, texto: str):
+        """Invierte el texto que escribas"""
+        invertido = texto[::-1]
+        if len(invertido) > 1000:
+            await ctx.send(embed=ui.error_embed("El texto es muy largo para invertir"))
+            return
+        await ctx.send(embed=ui.simple_embed("🔄 Texto invertido", f"**Original:** {texto}\n**Invertido:** {invertido}"))
+
+    @commands.hybrid_command(
+        name="bigtext",
+        description="🔤 Convierte texto a letras grandes con emojis",
+    )
+    async def bigtext(self, ctx, *, texto: str):
+        """Texto a letras emoji"""
+        letras = {
+            'a': '🇦', 'b': '🇧', 'c': '🇨', 'd': '🇩', 'e': '🇪', 'f': '🇫', 'g': '🇬',
+            'h': '🇭', 'i': '🇮', 'j': '🇯', 'k': '🇰', 'l': '🇱', 'm': '🇲', 'n': '🇳',
+            'o': '🇴', 'p': '🇵', 'q': '🇶', 'r': '🇷', 's': '🇸', 't': '🇹', 'u': '🇺',
+            'v': '🇻', 'w': '🇼', 'x': '🇽', 'y': '🇾', 'z': '🇿', ' ': '  ',
+            '0': '0️⃣', '1': '1️⃣', '2': '2️⃣', '3': '3️⃣', '4': '4️⃣',
+            '5': '5️⃣', '6': '6️⃣', '7': '7️⃣', '8': '8️⃣', '9': '9️⃣',
+        }
+        if len(texto) > 30:
+            await ctx.send(embed=ui.error_embed("Texto muy largo (máx 30 caracteres)"))
+            return
+        resultado = []
+        for char in texto.lower():
+            resultado.append(letras.get(char, char))
+        await ctx.send(' '.join(resultado))
+
+    @commands.hybrid_command(
+        name="owoify",
+        description="😺 Convierte texto a lenguaje OwO",
+    )
+    async def owoify(self, ctx, *, texto: str):
+        """OwO what's this?"""
+        owotext = texto
+        owotext = owotext.replace('r', 'w').replace('l', 'w')
+        owotext = owotext.replace('R', 'W').replace('L', 'W')
+        owotext = owotext.replace('v', 'w').replace('V', 'W')
+        owotext = owotext.replace('ñ', 'ny').replace('Ñ', 'Ny')
+        owotext = random.choice(["OwO ", "*nuzzles* ", "*pounces* ", "*notices* "]) + owotext
+        owotext += " " + random.choice(["*w*", "UwU", ">w<", ":3", "^w^", "rawr"])
+        if len(owotext) > 2000:
+            owotext = owotext[:1997] + "..."
+        await ctx.send(owotext)
+
+    @commands.hybrid_command(
+        name="waifu",
+        description="🖼️ Muestra una waifu anime aleatoria",
+    )
+    async def waifu(self, ctx):
+        """Obtén una imagen waifu aleatoria"""
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get('https://api.waifu.pics/sfw/waifu') as r:
+                    if r.status == 200:
+                        data = await r.json()
+                        embed = ui.simple_embed(
+                            title="🖼️ Waifu",
+                            image_url=data['url'],
+                            footer_text="waifu.pics"
+                        )
+                        await ctx.send(embed=embed)
+                    else:
+                        await ctx.send(embed=ui.error_embed("No se pudo obtener la waifu"))
+        except:
+            await ctx.send(embed=ui.error_embed("Error al conectar con la API"))
+
+    @commands.hybrid_command(
+        name="nekogirl",
+        aliases=["neko", "nekogirl"],
+        description="😺 Muestra una imagen neko aleatoria",
+    )
+    async def nekogirl(self, ctx):
+        """Obtén una imagen neko aleatoria"""
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get('https://api.waifu.pics/sfw/neko') as r:
+                    if r.status == 200:
+                        data = await r.json()
+                        embed = ui.simple_embed(
+                            title="😺 Neko girl",
+                            image_url=data['url'],
+                            footer_text="waifu.pics"
+                        )
+                        await ctx.send(embed=embed)
+                    else:
+                        await ctx.send(embed=ui.error_embed("No se pudo obtener la neko"))
+        except:
+            await ctx.send(embed=ui.error_embed("Error al conectar con la API"))
+
+    @commands.hybrid_command(
+        name="randomnumber",
+        aliases=["rand"],
+        description="🔢 Número aleatorio entre dos valores",
+    )
+    async def randomnumber(self, ctx, minimo: int = 1, maximo: int = 100):
+        """Genera un número aleatorio entre mínimo y máximo"""
+        if minimo >= maximo:
+            await ctx.send(embed=ui.error_embed("El **mínimo** debe ser menor que el **máximo**"))
+            return
+        if maximo - minimo > 1000000:
+            await ctx.send(embed=ui.error_embed("El rango máximo es de **1,000,000**"))
+            return
+        resultado = random.randint(minimo, maximo)
+        await ctx.send(embed=ui.simple_embed("🔢 Número Aleatorio", f"Entre **{minimo}** y **{maximo}**\n\n🎯 **{resultado}**"))
 
 async def setup(bot):
     if bot.get_cog("Fun") is not None:

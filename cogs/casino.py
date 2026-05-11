@@ -16,11 +16,13 @@ Dependencias:
 from __future__ import annotations
 
 import json
+import math
 import os
 import random
 from typing import Any, Optional
 
 import discord
+from discord import app_commands
 from discord.ext import commands
 
 # ──────────────────────────────────────────────
@@ -182,16 +184,14 @@ class Casino(commands.Cog):
         """
         if amount < MIN_BET:
             await ctx.send(
-                f"❌ La apuesta mínima es **{MIN_BET}** monedas.",
-                ephemeral=True,
+                f"❌ La apuesta mínima es **{MIN_BET}** monedas."
             )
             return None
 
         balance = self.get_balance(ctx.author.id)
         if amount > balance:
             await ctx.send(
-                f"❌ No tienes suficientes monedas. Tu saldo es **{balance}**.",
-                ephemeral=True,
+                f"❌ No tienes suficientes monedas. Tu saldo es **{balance}**."
             )
             return None
 
@@ -317,8 +317,7 @@ class Casino(commands.Cog):
             user_choice = "cruz"
         else:
             await ctx.send(
-                '❌ Elige **cara** o **cruz** (o **heads**/**tails**).',
-                ephemeral=True,
+                '❌ Elige **cara** o **cruz** (o **heads**/**tails**).'
             )
             return
 
@@ -415,14 +414,12 @@ class Casino(commands.Cog):
                     multiplier = 5
             else:
                 await ctx.send(
-                    "❌ El número debe estar entre **1** y **6**.",
-                    ephemeral=True,
+                    "❌ El número debe estar entre **1** y **6**."
                 )
                 return
         else:
             await ctx.send(
-                '❌ Apuesta inválida. Usa un número (1-6), **over** o **under**.',
-                ephemeral=True,
+                '❌ Apuesta inválida. Usa un número (1-6), **over** o **under**.'
             )
             return
 
@@ -538,6 +535,313 @@ class Casino(commands.Cog):
         if total > 0:
             embed.set_footer(text="¡Sigue jugando para mejorar tus estadísticas!")
 
+        await ctx.send(embed=embed)
+
+    # ==================================================================
+    # COMANDO: /crash
+    # ==================================================================
+
+    @commands.hybrid_command(
+        name="crash",
+        description="💥 Crash — Retira antes de que explote. Multiplicador creciente",
+    )
+    @app_commands.describe(
+        apuesta="Cantidad de monedas a apostar (mín. 10)",
+    )
+    async def crash(self, ctx: commands.Context, apuesta: int) -> None:
+        """💥 Crash Game — El multiplicador sube. Retira antes de que explote.
+
+        Parámetros
+        ----------
+        apuesta : int
+            Cantidad de monedas a apostar (mín. 10).
+        """
+        await ctx.defer()
+
+        balance = self._get_economy_cog()
+        if balance is None:
+            await ctx.send("❌ El sistema económico no está disponible.")
+            return
+
+        balance = balance.get_balance(ctx.author.id)
+        if apuesta < MIN_BET:
+            await ctx.send(f"❌ La apuesta mínima es **{MIN_BET}** monedas.")
+            return
+        if apuesta > balance:
+            await ctx.send(f"❌ No tienes suficientes monedas. Tu saldo: **{balance}** 🪙")
+            return
+
+        # Descontar apuesta
+        economy = self._get_economy_cog()
+        economy.add_money(ctx.author.id, -apuesta)
+
+        # Simular crash
+        crash_point = round(random.uniform(1.1, 8.0), 2)  # el punto donde explota
+        cashout = round(random.uniform(1.0, crash_point - 0.1), 2)  # el usuario "retira" antes
+        if cashout < 1.0:
+            cashout = 1.0
+
+        won = cashout < crash_point
+        multiplier = cashout
+        winnings = round(apuesta * multiplier)
+
+        description_parts = [
+            f"**Apuesta:** {apuesta} 🪙",
+            f"**Punto de explosión:** ×{crash_point:.2f}",
+            f"**Retiraste en:** ×{multiplier:.2f}",
+            "",
+        ]
+
+        if won:
+            economy.add_money(ctx.author.id, winnings)
+            self._update_stats(ctx.author.id, True, apuesta)
+            profit = winnings - apuesta
+            description_parts.append(
+                f"🎉 **¡Ganaste!** +**{winnings}** 🪙 (ganancia: **{profit}** 🪙)"
+            )
+            color = COLOR_GREEN
+        else:
+            self._update_stats(ctx.author.id, False, apuesta)
+            description_parts.append(
+                f"💥 **¡Explotó!** Perdiste **{apuesta}** 🪙\n"
+                f"Te retiraste en ×{multiplier:.2f} pero explotó en ×{crash_point:.2f}"
+            )
+            color = COLOR_RED
+
+        economy2 = self._get_economy_cog()
+        description_parts.append(f"")
+        description_parts.append(f"Saldo actual: **{economy2.get_balance(ctx.author.id)}** 🪙")
+
+        embed = discord.Embed(
+            title="💥 CRASH GAME",
+            description="\n".join(description_parts),
+            color=color,
+        )
+        await ctx.send(embed=embed)
+
+    # ==================================================================
+    # COMANDO: /mines
+    # ==================================================================
+
+    @commands.hybrid_command(
+        name="mines",
+        description="💣 Mines — Elige casillas y evita las minas. 3×3, 5×5 o 7×7",
+    )
+    @app_commands.describe(
+        apuesta="Cantidad de monedas a apostar (mín. 10)",
+        grilla="Tamaño de la grilla: 3, 5 o 7 (defecto: 5)",
+    )
+    async def mines(
+        self, ctx: commands.Context, apuesta: int, grilla: int = 5
+    ) -> None:
+        """💣 Mines — Buscaminas de casino: abre casillas sin minas para ganar.
+
+        Parámetros
+        ----------
+        apuesta : int
+            Cantidad de monedas a apostar (mín. 10).
+        grilla : int
+            Tamaño de la grilla: 3 (3×3), 5 (5×5) o 7 (7×7). Default: 5.
+        """
+        await ctx.defer()
+
+        economy = self._get_economy_cog()
+        if economy is None:
+            await ctx.send("❌ El sistema económico no está disponible.")
+            return
+
+        balance = economy.get_balance(ctx.author.id)
+        if apuesta < MIN_BET:
+            await ctx.send(f"❌ La apuesta mínima es **{MIN_BET}** monedas.")
+            return
+        if apuesta > balance:
+            await ctx.send(f"❌ No tienes suficientes monedas. Saldo: **{balance}** 🪙")
+            return
+
+        if grilla not in (3, 5, 7):
+            await ctx.send("❌ La grilla debe ser **3**, **5** o **7**.")
+            return
+
+        # Crear grilla
+        size = grilla
+        total_cells = size * size
+        num_mines = max(1, total_cells // 5)  # 20% minas
+
+        # Colocar minas
+        indices = list(range(total_cells))
+        random.shuffle(indices)
+        mine_positions = set(indices[:num_mines])
+
+        # Simular que el usuario abre algunas casillas sin mina
+        safe_cells = [i for i in range(total_cells) if i not in mine_positions]
+        random.shuffle(safe_cells)
+        num_revealed = random.randint(1, min(len(safe_cells), size))
+
+        # ¿Encontró mina?
+        hit_mine = random.random() < 0.35  # 35% de probabilidad de perder
+        if hit_mine and num_revealed > 1:
+            num_revealed = 1  # explota en la primera
+
+        revealed = safe_cells[:num_revealed]
+        hit_mine = hit_mine and (len(revealed) < len(safe_cells))
+
+        # Calcular multiplicador
+        if hit_mine:
+            economy.add_money(ctx.author.id, -apuesta)
+            self._update_stats(ctx.author.id, False, apuesta)
+
+            embed = discord.Embed(
+                title="💣 ¡MINAS!",
+                description=(
+                    f"💥 **¡Encontraste una mina!**\n\n"
+                    f"Abriste **{num_revealed}**/{total_cells} casillas\n"
+                    f"Perdiste **{apuesta}** 🪙\n\n"
+                    f"Saldo actual: **{economy.get_balance(ctx.author.id)}** 🪙"
+                ),
+                color=COLOR_RED,
+            )
+        else:
+            multiplier = max(1.5, round(total_cells / (num_mines + 1) * 0.8, 2))
+            winnings = round(apuesta * multiplier)
+            economy.add_money(ctx.author.id, winnings)
+            self._update_stats(ctx.author.id, True, apuesta)
+
+            embed = discord.Embed(
+                title="💣 ¡MINAS!",
+                description=(
+                    f"✅ ¡Superviviente! Abriste **{num_revealed}**/{total_cells} casillas sin minas.\n\n"
+                    f"Multiplicador: **×{multiplier}**\n"
+                    f"Ganaste: **{winnings}** 🪙\n\n"
+                    f"Saldo actual: **{economy.get_balance(ctx.author.id)}** 🪙"
+                ),
+                color=COLOR_GREEN,
+            )
+
+        # Mostrar representación visual simple de la grilla
+        grid_display = []
+        for i in range(total_cells):
+            if i in mine_positions:
+                grid_display.append("💣")
+            elif i in revealed:
+                grid_display.append("✅")
+            else:
+                grid_display.append("⬛")
+
+        grid_lines = []
+        for row in range(size):
+            row_cells = grid_display[row * size:(row + 1) * size]
+            grid_lines.append(" ".join(row_cells))
+
+        embed.add_field(
+            name=f"Grilla {size}×{size} ({num_mines} minas)",
+            value="\n".join(grid_lines),
+            inline=False,
+        )
+
+        await ctx.send(embed=embed)
+
+    # ==================================================================
+    # COMANDO: /plinko
+    # ==================================================================
+
+    @commands.hybrid_command(
+        name="plinko",
+        description="🔴 Plinko — Suelta una ficha y gana según la casilla",
+    )
+    @app_commands.describe(
+        apuesta="Cantidad de monedas a apostar (mín. 10)",
+        riesgo="Riesgo: bajo (b), medio (m) o alto (a) — default: medio",
+    )
+    async def plinko(
+        self, ctx: commands.Context, apuesta: int, riesgo: str = "m"
+    ) -> None:
+        """🔴 Plinko — Deja caer una ficha y gana según dónde caiga.
+
+        Parámetros
+        ----------
+        apuesta : int
+            Cantidad de monedas a apostar (mín. 10).
+        riesgo : str
+            Riesgo: bajo (b), medio (m) o alto (a). Default: medio.
+        """
+        await ctx.defer()
+
+        economy = self._get_economy_cog()
+        if economy is None:
+            await ctx.send("❌ El sistema económico no está disponible.")
+            return
+
+        balance = economy.get_balance(ctx.author.id)
+        if apuesta < MIN_BET:
+            await ctx.send(f"❌ La apuesta mínima es **{MIN_BET}** monedas.")
+            return
+        if apuesta > balance:
+            await ctx.send(f"❌ No tienes suficientes monedas. Saldo: **{balance}** 🪙")
+            return
+
+        riesgo = riesgo.lower().strip()
+        risk_map = {"bajo": "b", "b": "b", "low": "b",
+                    "medio": "m", "m": "m", "medium": "m",
+                    "alto": "a", "a": "a", "high": "a"}
+
+        nivel = risk_map.get(riesgo, "m")
+
+        # Definir multiplicadores según riesgo
+        multipliers = {
+            "b": [0.5, 1.0, 1.5, 3.0, 1.5, 1.0, 0.5],   # bajo
+            "m": [0.3, 0.7, 1.5, 5.0, 1.5, 0.7, 0.3],   # medio
+            "a": [0.1, 0.5, 2.0, 10.0, 2.0, 0.5, 0.1],  # alto
+        }
+
+        # Simular caída: elegir casilla final (centro tiene más prob)
+        weights = [1, 2, 3, 5, 3, 2, 1] if nivel == "b" else \
+                  [1, 2, 4, 6, 4, 2, 1] if nivel == "m" else \
+                  [1, 3, 5, 8, 5, 3, 1]
+
+        slot = random.choices(range(7), weights=weights, k=1)[0]
+        multiplier = multipliers[nivel][slot]
+        winnings = round(apuesta * multiplier)
+
+        # Visual de la tabla de Plinko
+        slots_display = []
+        for i in range(7):
+            if i == slot:
+                slots_display.append(f"**🔴**")
+            else:
+                mult = multipliers[nivel][i]
+                slots_display.append(f"×{mult}")
+
+        risk_names = {"b": "🟢 Bajo", "m": "🟡 Medio", "a": "🔴 Alto"}
+
+        if winnings >= apuesta:
+            profit = winnings - apuesta
+            economy.add_money(ctx.author.id, profit)
+            self._update_stats(ctx.author.id, True, apuesta)
+            desc = (
+                f"Riesgo: {risk_names[nivel]}\n\n"
+                f"{' ┃ '.join(slots_display)}\n\n"
+                f"🎯 La ficha cayó en **casilla {slot + 1}** (×{multiplier})\n\n"
+                f"✅ **¡Ganaste!** +**{winnings}** 🪙\n"
+                f"Saldo: **{economy.get_balance(ctx.author.id)}** 🪙"
+            )
+            color = COLOR_GREEN
+        else:
+            economy.add_money(ctx.author.id, -apuesta)
+            self._update_stats(ctx.author.id, False, apuesta)
+            desc = (
+                f"Riesgo: {risk_names[nivel]}\n\n"
+                f"{' ┃ '.join(slots_display)}\n\n"
+                f"🎯 La ficha cayó en **casilla {slot + 1}** (×{multiplier})\n\n"
+                f"😢 Perdiste **{apuesta}** 🪙\n"
+                f"Saldo: **{economy.get_balance(ctx.author.id)}** 🪙"
+            )
+            color = COLOR_RED
+
+        embed = discord.Embed(
+            title="🔴 PLINKO",
+            description=desc,
+            color=color,
+        )
         await ctx.send(embed=embed)
 
 
