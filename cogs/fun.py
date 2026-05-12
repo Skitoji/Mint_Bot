@@ -8,9 +8,9 @@ class Fun(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
     
-    @commands.hybrid_command(description="Pregunta a la bola mágica")
+    @commands.hybrid_command(name="8ball", aliases=["eightball"], description="Pregunta a la bola mágica")
     async def eightball(self, ctx, *, question: str):
-        """Bola 8 mágica - &eightball <pregunta>"""
+        """Bola 8 mágica - &8ball <pregunta>"""
         responses = [
             "Sí, definitivamente",
             "No, de ninguna manera",
@@ -23,7 +23,7 @@ class Fun(commands.Cog):
             "Sin duda",
             "El futuro es incierto"
         ]
-        
+
         embed = ui.simple_embed(
             title="🔮 Bola Mágica",
             description=f"**Pregunta:** {question}\n\n**Respuesta:** {random.choice(responses)}",

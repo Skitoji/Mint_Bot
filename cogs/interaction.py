@@ -117,6 +117,34 @@ class Interaction(commands.Cog):
         """Sonríes — &smile"""
         await self._send_action(ctx, "smile", "sonrió", emoji="😄")
 
+    # ──────────────────────────────────────────────
+    #  Nuevos comandos de interacción
+    # ──────────────────────────────────────────────
+
+    @commands.hybrid_command(name="punch", description="Golpea a alguien")
+    @app_commands.describe(target="Usuario al que quieres golpear")
+    async def punch(self, ctx: commands.Context, target: discord.Member):
+        """Golpea a otro usuario — &punch @usuario"""
+        await self._send_action(ctx, "punch", "le dio un puñetazo a", target=target, emoji="👊")
+
+    @commands.hybrid_command(name="bonk", description="Golpea a alguien en la cabeza")
+    @app_commands.describe(target="Usuario al que quieres golpear")
+    async def bonk(self, ctx: commands.Context, target: discord.Member):
+        """Golpea en la cabeza a otro usuario — &bonk @usuario"""
+        await self._send_action(ctx, "bonk", "le dio un bonk en la cabeza a", target=target, emoji="🔨")
+
+    @commands.hybrid_command(name="blurp", description="Hazle burla a alguien")
+    @app_commands.describe(target="Usuario al que quieres burlar")
+    async def blurp(self, ctx: commands.Context, target: discord.Member):
+        """Se burla de otro usuario — &blurp @usuario"""
+        await self._send_action(ctx, "blurp", "se burló de", target=target, emoji="😛")
+
+    @commands.hybrid_command(name="bite", description="Muerde a alguien")
+    @app_commands.describe(target="Usuario al que quieres morder")
+    async def bite(self, ctx: commands.Context, target: discord.Member):
+        """Muerde a otro usuario — &bite @usuario"""
+        await self._send_action(ctx, "bite", "mordió a", target=target, emoji="🦷")
+
 
 async def setup(bot):
     """Carga el cog Interaction en el bot"""
