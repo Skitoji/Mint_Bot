@@ -39,22 +39,38 @@ class Admin(commands.Cog):
     )
     @commands.is_owner()
     @app_commands.describe(
-        especifico="Usa '.' para sincronizar solo en este servidor (rápido)",
+        modo="Usa 'guild' para solo este servidor, 'global' para todos, 'clean' para limpiar duplicados",
     )
-    async def sync(self, ctx: commands.Context, especifico: str = None):
+    @app_commands.choices(modo=[
+        app_commands.Choice(name="🌍 Global (lento, 1h)", value="global"),
+        app_commands.Choice(name="🏠 Este servidor (rápido)", value="guild"),
+        app_commands.Choice(name="🧹 Limpiar + resincronizar", value="clean"),
+    ])
+    async def sync(self, ctx: commands.Context, modo: str = "guild"):
         """Sincronizar comandos slash con Discord.
-        
-        Uso: &sync → global (lento, hasta 1h)
-              &sync . → solo este servidor (instantáneo)
+
+        &sync guild → solo este servidor (rápido)
+        &sync global → global (lento, hasta 1h)
+        &sync clean → limpia duplicados y resincroniza
         """
-        if especifico == ".":
+        if modo == "global":
+            await ctx.send("⏳ Sincronizando globalmente... (puede tardar hasta 1h en propagarse)")
+            synced = await self.bot.tree.sync()
+            await ctx.send(f"✅ **{len(synced)}** comandos sincronizados globalmente.")
+
+        elif modo == "clean":
+            await ctx.send("🧹 Limpiando comandos duplicados del servidor...")
+            self.bot.tree.clear_commands(guild=ctx.guild)
+            await self.bot.tree.sync(guild=ctx.guild)
+            # Ahora copiar de nuevo desde global
+            self.bot.tree.copy_global_to(guild=ctx.guild)
+            synced = await self.bot.tree.sync(guild=ctx.guild)
+            await ctx.send(f"✅ **{len(synced)}** comandos limpios y sincronizados en **{ctx.guild.name}**")
+
+        else:  # guild
             self.bot.tree.copy_global_to(guild=ctx.guild)
             synced = await self.bot.tree.sync(guild=ctx.guild)
             await ctx.send(f"✅ **{len(synced)}** comandos sincronizados en **{ctx.guild.name}**")
-        else:
-            await ctx.send("⏳ Sincronizando globalmente... (esto puede tardar hasta 1 hora en propagarse)")
-            synced = await self.bot.tree.sync()
-            await ctx.send(f"✅ **{len(synced)}** comandos sincronizados globalmente.")
 
     @commands.command()
     @commands.is_owner()
