@@ -344,5 +344,59 @@ class Economy(commands.Cog):
         embed.add_field(name="📈 Neto", value=f"**{neto:,}** monedas")
         await ctx.send(embed=embed)
 
+    @commands.hybrid_command(name="gamble", description="Apuesta coins (50% ganar, 50% perder)")
+    @app_commands.describe(cantidad="Cantidad de coins a apostar")
+    async def gamble(self, ctx, cantidad: int):
+        """Apuesta tus coins — &gamble <cantidad>"""
+        if cantidad <= 0:
+            await ctx.send(embed=error_embed("❌ La cantidad debe ser mayor a 0"), ephemeral=True)
+            return
+
+        _, user_data = get_user_data(ctx.author.id)
+        if user_data["money"] < cantidad:
+            await ctx.send(embed=error_embed("❌ No tienes suficiente dinero"), ephemeral=True)
+            return
+
+        resultado = random.choice(["ganaste", "perdiste"])
+        if resultado == "ganaste":
+            user_data["money"] += cantidad
+            embed = success_embed(f"🎉 ¡Ganaste **{cantidad:,}** coins! Ahora tienes **{user_data['money']:,}** coins")
+        else:
+            user_data["money"] -= cantidad
+            embed = error_embed(f"😢 Perdiste **{cantidad:,}** coins. Te quedan **{user_data['money']:,}** coins")
+
+        data = load_economy()
+        data[str(ctx.author.id)] = user_data
+        save_economy(data)
+        await ctx.send(embed=embed)
+
+    @commands.hybrid_command(name="pagar", description="Transfiere coins a otro usuario")
+    @app_commands.describe(usuario="Usuario a quien pagar", cantidad="Cantidad de coins")
+    async def pagar(self, ctx, usuario: discord.Member, cantidad: int):
+        """Paga a otro usuario — &pagar @usuario <cantidad>"""
+        # Reutilizar la lógica de /give
+        donante_data = get_user_data(ctx.author.id)[1]
+        receptor_data = get_user_data(usuario.id)[1]
+
+        if cantidad <= 0:
+            await ctx.send(embed=error_embed("❌ La cantidad debe ser mayor a 0"), ephemeral=True)
+            return
+        if usuario.id == ctx.author.id:
+            await ctx.send(embed=error_embed("❌ No puedes pagarte a ti mismo"), ephemeral=True)
+            return
+        if donante_data["money"] < cantidad:
+            await ctx.send(embed=error_embed("❌ No tienes suficiente dinero"), ephemeral=True)
+            return
+
+        donante_data["money"] -= cantidad
+        receptor_data["money"] += cantidad
+
+        data = load_economy()
+        data[str(ctx.author.id)] = donante_data
+        data[str(usuario.id)] = receptor_data
+        save_economy(data)
+
+        await ctx.send(embed=success_embed(f"💸 Le pagaste **{cantidad:,}** coins a {usuario.display_name}!"))
+
 async def setup(bot):
     await bot.add_cog(Economy(bot))

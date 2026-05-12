@@ -357,10 +357,43 @@ class Music(commands.Cog):
         """Repetir canción/cola"""
         if not hasattr(self, 'loop_enabled'):
             self.loop_enabled = False
-        
+
         self.loop_enabled = not self.loop_enabled
         status = "🔄 Loop ACTIVADO" if self.loop_enabled else "❌ Loop desactivado"
         await ctx.send(embed=ui.info_embed("Loop", status))
+
+    @commands.hybrid_command(name="shuffle", description="Mezcla la cola de reproducción al azar")
+    async def shuffle(self, ctx):
+        """Mezclar cola — &shuffle"""
+        if not self.queue:
+            await ctx.send(embed=ui.error_embed("La cola está vacía"))
+            return
+        import random
+        random.shuffle(self.queue)
+        await ctx.send(embed=ui.success_embed("🔀 Cola mezclada al azar"))
+
+    @commands.hybrid_command(name="volume", description="Ajusta el volumen (0-100)")
+    @app_commands.describe(nivel="Nivel de volumen (0-100)")
+    async def volume(self, ctx, nivel: int):
+        """Cambiar volumen — &volume <0-100>"""
+        if not ctx.voice_client:
+            await ctx.send(embed=ui.error_embed("No estoy en un canal de voz"))
+            return
+        if nivel < 0 or nivel > 100:
+            await ctx.send(embed=ui.error_embed("El volumen debe ser entre 0 y 100"))
+            return
+        ctx.voice_client.source.volume = nivel / 100.0
+        await ctx.send(embed=ui.success_embed(f"🔊 Volumen ajustado a **{nivel}%**"))
+
+    @commands.hybrid_command(name="leave", aliases=["salir"], description="Desconecta el bot del canal de voz")
+    async def leave(self, ctx):
+        """Desconectar — &leave (alias de &disconnect)"""
+        await self.disconnect(ctx)
+
+    @commands.hybrid_command(name="np", aliases=["sonando"], description="Muestra qué canción está sonando ahora")
+    async def np(self, ctx):
+        """Ver qué suena — &np (alias de &nowplaying)"""
+        await self.nowplaying(ctx)
 
 async def setup(bot):
     if bot.get_cog("Music") is not None:
