@@ -118,24 +118,24 @@ class Fun(commands.Cog):
                     )
                     await ctx.send(embed=embed)
         except Exception:
-             await ctx.send(embed=ui.error_embed("Error al conectar con la API de memes"))
-    
+                     await ctx.send(embed=ui.error_embed("Error al conectar con la API de memes"))
+
     @commands.hybrid_command(description="Lanza una moneda")
     async def flip(self, ctx):
         """Lanzar una moneda"""
         result = random.choice(['Cara ✅', 'Cruz ❌'])
         await ctx.send(embed=ui.simple_embed("🪙 Moneda", f"Resultado: **{result}**"))
-    
+
     @commands.hybrid_command(description="Lanza un dado")
     async def roll(self, ctx, sides: int = 6):
         """Lanzar dado - &roll <caras>"""
         if sides < 2:
             await ctx.send(embed=ui.error_embed("El dado debe tener al menos 2 caras"))
             return
-        
+
         result = random.randint(1, sides)
         await ctx.send(embed=ui.simple_embed("🎲 Dado", f"Sacaste un **{result}** en un dado de {sides} caras"))
-    
+
     @commands.hybrid_command(description="Elige entre varias opciones")
     async def choose(self, ctx, *, options: str):
         """Elegir entre opciones - &choose opción1 | opción2 | opción3"""
@@ -147,29 +147,6 @@ class Fun(commands.Cog):
 
         chosen = random.choice(choices)
         await ctx.send(embed=ui.success_embed(f"Elegí: **{chosen}**"))
-
-    @commands.hybrid_command(
-        name="coinflip",
-        aliases=["flip"],
-        description="🪙 Lanza una moneda (cara o cruz)",
-    )
-    async def coinflip(self, ctx):
-        """Lanza una moneda al aire"""
-        result = random.choice(['Cara ✅', 'Cruz ❌'])
-        await ctx.send(embed=ui.simple_embed("🪙 Moneda", f"Cayó: **{result}**"))
-
-    @commands.hybrid_command(
-        name="dice",
-        aliases=["roll"],
-        description="🎲 Lanza un dado de hasta 100 caras",
-    )
-    async def dice(self, ctx, caras: int = 6):
-        """Lanza un dado con el número de caras que elijas"""
-        if caras < 2 or caras > 100:
-            await ctx.send(embed=ui.error_embed("El dado debe tener entre **2** y **100** caras"))
-            return
-        result = random.randint(1, caras)
-        await ctx.send(embed=ui.simple_embed("🎲 Dado", f"Sacaste un **{result}** (dado de {caras} caras) 🎲"))
 
     @commands.hybrid_command(
         name="howgay",

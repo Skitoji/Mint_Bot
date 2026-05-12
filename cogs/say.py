@@ -106,17 +106,6 @@ class Say(commands.Cog):
         await canal_destino.send(embed=embed)
         await ctx.send(f"✅ Mensaje enviado a {canal_destino.mention}", ephemeral=True)
 
-    # Soporte para prefijo también (por si se usa &say)
-    @commands.command(name="say")
-    @commands.has_permissions(administrator=True)
-    async def say_prefix(self, ctx, canal: discord.TextChannel = None, *, texto: str = None):
-        """Envío de embed avanzado mediante prefijo. Uso: &say #canal título|descripción|... (formato complejo). 
-        Para simplicidad, se recomienda usar el slash command."""
-        if not texto:
-            await ctx.send("❌ Uso: `&say #canal título|descripción|color|imagen|miniature|footer|anonymous|timestamp`\nEjemplo: `&say #general Reglas| - Ser respetuoso - No spamear|blue|https://...`", ephemeral=True)
-            return
-        # Implementación simplificada para prefijo: se podría parsear, pero mejor remitir al slash
-        await ctx.send("⚠️ Usa el comando `/say` para una experiencia más completa y con opciones.", ephemeral=True)
 
 async def setup(bot):
     await bot.add_cog(Say(bot))
