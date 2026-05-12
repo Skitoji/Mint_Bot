@@ -1,5 +1,7 @@
 from discord.ext import commands, tasks
 import json, os, random, asyncio
+import discord
+from utils import ui
 
 class XP(commands.Cog):
     def __init__(self, bot):

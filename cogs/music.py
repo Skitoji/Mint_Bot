@@ -366,23 +366,40 @@ class Music(commands.Cog):
     async def shuffle(self, ctx):
         """Mezclar cola — &shuffle"""
         if not self.queue:
-            await ctx.send(embed=ui.error_embed("La cola está vacía"))
+            await ctx.send(embed=ui.error_embed("📭 La cola está vacía"))
             return
         import random
-        random.shuffle(self.queue)
-        await ctx.send(embed=ui.success_embed("🔀 Cola mezclada al azar"))
+        # deque no es directamente shuffleable, convertir a lista primero
+        items = list(self.queue)
+        random.shuffle(items)
+        self.queue = deque(items)
+        await ctx.send(embed=ui.success_embed(f"🔀 Cola mezclada (**{len(self.queue)}** canciones)"))
 
     @commands.hybrid_command(name="volume", description="Ajusta el volumen (0-100)")
     @app_commands.describe(nivel="Nivel de volumen (0-100)")
     async def volume(self, ctx, nivel: int):
         """Cambiar volumen — &volume <0-100>"""
         if not ctx.voice_client:
-            await ctx.send(embed=ui.error_embed("No estoy en un canal de voz"))
+            await ctx.send(embed=ui.error_embed("🔇 No estoy en un canal de voz"))
             return
         if nivel < 0 or nivel > 100:
-            await ctx.send(embed=ui.error_embed("El volumen debe ser entre 0 y 100"))
+            await ctx.send(embed=ui.error_embed("🔊 El volumen debe ser entre 0 y 100"))
             return
-        ctx.voice_client.source.volume = nivel / 100.0
+        if not ctx.voice_client.source:
+            await ctx.send(embed=ui.error_embed("🎵 No hay música reproduciéndose"))
+            return
+        if hasattr(ctx.voice_client.source, 'volume'):
+            ctx.voice_client.source.volume = nivel / 100.0
+        elif hasattr(ctx.voice_client.source, 'original'):
+            # FFmpegPCMAudio wrapper
+            if hasattr(ctx.voice_client.source, 'volume'):
+                ctx.voice_client.source.volume = nivel / 100.0
+            else:
+                await ctx.send(embed=ui.info_embed("ℹ️ Este reproductor no soporta cambio de volumen"))
+                return
+        else:
+            await ctx.send(embed=ui.info_embed("ℹ️ Este reproductor no soporta cambio de volumen"))
+            return
         await ctx.send(embed=ui.success_embed(f"🔊 Volumen ajustado a **{nivel}%**"))
 
     @commands.hybrid_command(name="leave", aliases=["salir"], description="Desconecta el bot del canal de voz")
